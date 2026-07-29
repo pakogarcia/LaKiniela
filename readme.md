@@ -106,8 +106,3 @@ Herramienta de texto orientada a la terminal para introducir los datos de los eq
   python interfaz_usuario.py
   ```
 
-### Ejecución de la Interfaz Web:
-  ```cmd
-  streamlit run app_web.py
-  ```
-
