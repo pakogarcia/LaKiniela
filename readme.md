@@ -21,13 +21,13 @@ Proyecto integral de Machine Learning y Analítica de Datos diseñado para prede
 
 ## 🚀 Instalación y Uso
 
-# LaQuiniela Predictor ⚽🤖
+# LaKiniela Predictor
 
 Sistema automatizado de predicción de partidos de fútbol (Primera y Segunda División) basado en Machine Learning (XGBoost y Random Forest) y análisis de métricas Elo.
 
 ## 📂 Bloque 1: Consolidación y Limpieza de Datos
 
-En este bloque unificamos y depuramos los datos históricos en bruto de ambas categorías para generar un único dataset maestro coherente.
+En este bloque unificamos y depuramos los datos históricos en bruto de ambas categorías Primera y Segunda División de Fútbol de España para generar un único dataset maestro coherente.
 
 ### Script Principal: `union.py`
 Este script automatiza todo el proceso de preparación inicial:
@@ -39,3 +39,66 @@ Este script automatiza todo el proceso de preparación inicial:
 ### Cómo ejecutarlo:
 ```cmd
 python union.py
+```
+
+## ♟️ Bloque 2: Sistema de Ratings Elo
+
+El Elo mide la fuerza relativa y actualizada de cada equipo de Primera y Segunda División. Se integra en nuestro pipeline para alimentar las variables predictivas de los modelos de Machine Learning.
+
+### Archivos Clave:
+* **`actualizar_elo.py`**: Diseñado para consultar la API de ClubElo de forma automatizada por fecha y club[cite: 3].
+* **`descargar_elo_completo.py`**: Extrae la tabla histórica de ratings directamente desde el sitio web mediante scraping robusto (`BeautifulSoup` + `pandas`)[cite: 4].
+
+> ⚠️ **Nota Importante sobre la Capacidad de la Página:** 
+> La actualización en tiempo real de los ratings desde la web de ClubElo puede verse **imposibilitada u obstaculizada temporalmente** debido a restricciones de tráfico, límites de peticiones de la API o bloqueos de la plataforma externa. Por ello, el sistema prioriza el uso de archivos históricos locales (`EloSP1.csv`, `EloSP1_Historico.csv`) cuando la conexión directa no está disponible.
+
+
+## ⛅ Bloque 3: Enriquecimiento Climático y Fusión Definitiva
+
+Para dar mayor realismo y precisión a las predicciones de los partidos, el sistema incorpora variables meteorológicas históricas basadas en la ubicación geográfica de cada estadio.
+
+### Scripts y Componentes Principales:
+* **`auditor_coordenadas.py`**: Verifica que todos los equipos presentes en el histórico de partidos dispongan de sus respectivas coordenadas geográficas en `coordenadas_equipos.csv`[cite: 6].
+* **`enriquecer_clima.py`**: Realiza peticiones masivas a la API de *Open-Meteo* utilizando la latitud y longitud del equipo local en la fecha exacta del partido. Incluye:
+  * Control de reanudación automática si se interrumpe el proceso.
+  * Auto-guardado de seguridad cada 100 registros (`SP1_con_clima.csv`)[cite: 7].
+  * Detección de límites de peticiones (`LIMIT`) por restricciones de IP[cite: 7].
+* **`fusionar_elo_clima.py`**: Consolida el pipeline uniendo los datos meteorológicos y los ratings Elo históricos mediante diccionarios optimizados de alto rendimiento, generando el archivo maestro definitivo **`LaLiga_Dataset_Final.csv`**[cite: 5].
+
+## 🤖 Bloque 4: Entrenamiento de Modelos y API Predictiva
+
+Una vez consolidado el dataset maestro con la información histórica, los ratings Elo y el clima, procedemos al entrenamiento de los algoritmos de Machine Learning y a la puesta en marcha de una API de inferencia.
+
+### Archivos Clave:
+* **`entrenar_modelos.py`**: Script encargado de:
+  * Cruzar y alinear los datos de clima y Elo.
+  * Preparar las variables predictivas (`elo_local`, `elo_visitante`, `dif_elo`, cuotas de apuestas `B365`).
+  * Entrenar un **XGBoost Classifier** optimizado para el mercado **1X2** con ponderación de clases balanceadas[cite: 10].
+  * Entrenar un **Random Forest Classifier** para el mercado de **Goles (Más/Menos de 2.5)**[cite: 10].
+  * Serializar y guardar los modelos (`modelo_1x2_xgboost.pkl`, `modelo_goles_rf.pkl`, `label_encoder.pkl`)[cite: 10].
+* **`api_predicciones.py`**: API ligera construida con **FastAPI** que carga los modelos serializados y expone un endpoint POST (`/predecir`) para calcular en tiempo real las probabilidades de cualquier enfrentamiento[cite: 9, 10].
+
+
+## 🌐 Bloque 5: Interfaz de Usuario y Simulación
+
+Para hacer accesible el sistema predictivo sin necesidad de interactuar con código, el proyecto cuenta con herramientas visuales y de prueba.
+
+### Componentes de Interfaz:
+* **`interfaz_usuario.py` (Streamlit)**: Interfaz gráfica web que facilita:
+  * Selección dinámica de equipos locales y visitantes basados en el dataset unificado[cite: 13].
+  * Configuración interactiva de cuotas de apuestas (1X2)[cite: 13].
+  * Búsqueda automática del último rating Elo registrado para cada contendiente[cite: 13].
+  * Representación visual limpia y clara de las probabilidades de victoria, empate y goles obtenidas a través de la API[cite: 13].
+* **Simulador por consola (`test_elo_api.py`)**: Utilidad en terminal orientada a pruebas de integración rápidas y depuración del motor de inferencia[cite: 14].
+
+### Ejecución de la FastAPI:
+```cmd
+uvicorn api_predicciones:app
+```
+
+Abrimos otra terminal
+
+### Ejecución de la Interfaz Web:
+```cmd
+streamlit run interfaz_usuario.py
+```
