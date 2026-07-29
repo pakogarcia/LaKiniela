@@ -1,0 +1,13 @@
+pandas
+requests
+openmeteo-requests
+requests-cache
+retry
+matplotlib
+seaborn
+scikit-learn
+xgboost
+fastapi
+uvicorn
+streamlit
+joblib
