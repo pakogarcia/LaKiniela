@@ -58,7 +58,7 @@ El Elo mide la fuerza relativa y actualizada de cada equipo de Primera y Segunda
 Para dar mayor realismo y precisión a las predicciones de los partidos, el sistema incorpora variables meteorológicas históricas basadas en la ubicación geográfica de cada estadio.
 
 ### Scripts y Componentes Principales:
-* **`auditor_coordenadas.py`**: Verifica que todos los equipos presentes en el histórico de partidos dispongan de sus respectivas coordenadas geográficas en `coordenadas_equipos.csv`[cite: 6].
+* **`auditor_equipos.py`**: Verifica que todos los equipos presentes en el histórico de partidos dispongan de sus respectivas coordenadas geográficas en `coordenadas_equipos.csv`[cite: 6].
 * **`enriquecer_clima.py`**: Realiza peticiones masivas a la API de *Open-Meteo* utilizando la latitud y longitud del equipo local en la fecha exacta del partido. Incluye:
   * Control de reanudación automática si se interrumpe el proceso.
   * Auto-guardado de seguridad cada 100 registros (`SP1_con_clima.csv`)[cite: 7].
@@ -88,13 +88,14 @@ El proyecto incluye dos modalidades diferentes para interactuar con el motor pre
 Para que cualquiera de las interfaces pueda calcular las predicciones, el servidor de la API REST debe estar encendido y en funcionamiento en segundo plano ejecutando (en otra terminal):
   ```cmd
   uvicorn api_predicciones:app --reload
-
+  ``` 
 ### 1. Interfaz Web Gráfica (Streamlit)
 Permite seleccionar los equipos mediante desplegables visuales, configurar las cuotas de apuestas de forma interactiva y visualizar las probabilidades de los mercados 1X2 y de Goles de manera gráfica.
 * **Archivo:** `app_web.py`
 * **Ejecución:**
   ```cmd
   streamlit run app_web.py
+  ```
 
 ### 2. Simulador Interactivo por Consola
 Herramienta de texto orientada a la terminal para introducir los datos de los equipos y cuotas de forma rápida mediante entrada de teclado (input()).
@@ -103,5 +104,13 @@ Herramienta de texto orientada a la terminal para introducir los datos de los eq
 * **Ejecución:**
   ```cmd
   python interfaz_usuario.py
+  ```
 
+### 2. Simulador Interactivo por Consola
+Herramienta de texto orientada a la terminal para introducir los datos de los equipos y cuotas de forma rápida mediante entrada de teclado (input()).
 
+* **Archivo:** `interfaz_usuario.py`
+* **Ejecución:**
+  ```cmd
+  python interfaz_usuario.py
+  ```
