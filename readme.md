@@ -20,4 +20,22 @@ Proyecto integral de Machine Learning y Analítica de Datos diseñado para prede
 * **APIs:** The Odds API, [Nombre de tu API del clima]
 
 ## 🚀 Instalación y Uso
-*(Lo rellenaremos más adelante)*
+
+# LaQuiniela Predictor ⚽🤖
+
+Sistema automatizado de predicción de partidos de fútbol (Primera y Segunda División) basado en Machine Learning (XGBoost y Random Forest) y análisis de métricas Elo.
+
+## 📂 Bloque 1: Consolidación y Limpieza de Datos
+
+En este bloque unificamos y depuramos los datos históricos en bruto de ambas categorías para generar un único dataset maestro coherente.
+
+### Script Principal: `union.py`
+Este script automatiza todo el proceso de preparación inicial:
+1. **Carga**: Lee de forma segura los archivos históricos de Primera (`SP1_total.csv`) y Segunda (`SP2_total.csv`) División[cite: 1].
+2. **Fusión**: Combina ambos datasets alineando automáticamente sus registros mediante `pandas`[cite: 1].
+3. **Limpieza**: Filtra el conjunto de datos para conservar únicamente las columnas oficiales de rendimiento, estadísticas de juego y cuotas de apuestas necesarias[cite: 2].
+4. **Exportación**: Genera el archivo maestro definitivo **`LaLiga_Dataset_Final.csv`** listo para el cálculo de Elo y el entrenamiento de los modelos.
+
+### Cómo ejecutarlo:
+```cmd
+python union.py
