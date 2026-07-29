@@ -100,5 +100,5 @@ Abrimos otra terminal
 
 ### Ejecución de la Interfaz Web:
 ```cmd
-streamlit run interfaz_usuario.py
+streamlit run app_web.py
 ```
