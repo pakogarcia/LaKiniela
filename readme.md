@@ -81,24 +81,33 @@ Una vez consolidado el dataset maestro con la información histórica, los ratin
 
 ## 🌐 Bloque 5: Interfaz de Usuario y Simulación
 
-Para hacer accesible el sistema predictivo sin necesidad de interactuar con código, el proyecto cuenta con herramientas visuales y de prueba.
+El proyecto incluye dos modalidades diferentes para interactuar con el motor predictivo y consultar las probabilidades de los partidos:
 
-### Componentes de Interfaz:
-* **`interfaz_usuario.py` (Streamlit)**: Interfaz gráfica web que facilita:
-  * Selección dinámica de equipos locales y visitantes basados en el dataset unificado[cite: 13].
-  * Configuración interactiva de cuotas de apuestas (1X2)[cite: 13].
-  * Búsqueda automática del último rating Elo registrado para cada contendiente[cite: 13].
-  * Representación visual limpia y clara de las probabilidades de victoria, empate y goles obtenidas a través de la API[cite: 13].
-* **Simulador por consola (`test_elo_api.py`)**: Utilidad en terminal orientada a pruebas de integración rápidas y depuración del motor de inferencia[cite: 14].
+⚠️ Requisito previo para ambas interfaces:
+Para que cualquiera de las interfaces pueda calcular las predicciones, el servidor de la API REST debe estar encendido y en funcionamiento en segundo plano ejecutando (en otra terminal):
+  ```cmd
+  uvicorn api_predicciones:app --reload
+  ``` 
 
-### Ejecución de la FastAPI:
-```cmd
-uvicorn api_predicciones:app
-```
+### 1. Interfaz Web Gráfica (Streamlit)
+Permite seleccionar los equipos mediante desplegables visuales, configurar las cuotas de apuestas de forma interactiva y visualizar las probabilidades de los mercados 1X2 y de Goles de manera gráfica.
+* **Archivo:** `app_web.py`
+* **Ejecución:**
+  ```cmd
+  streamlit run app_web.py
+  ```
 
-Abrimos otra terminal
+### 2. Simulador Interactivo por Consola
+Herramienta de texto orientada a la terminal para introducir los datos de los equipos y cuotas de forma rápida mediante entrada de teclado (input()).
+
+* **Archivo:** `interfaz_usuario.py`
+* **Ejecución:**
+  ```cmd
+  python interfaz_usuario.py
+  ```
 
 ### Ejecución de la Interfaz Web:
-```cmd
-streamlit run app_web.py
-```
+  ```cmd
+  streamlit run app_web.py
+  ```
+
