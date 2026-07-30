@@ -1,116 +1,77 @@
-# 📈 ML Sports Value Betting (LaKiniela)
+# 
 
-Proyecto integral de Machine Learning y Analítica de Datos diseñado para predecir resultados de fútbol (Primera y Segunda División de España) y detectar "Value Bets" cruzando predicciones de IA con cuotas reales de casas de apuestas en tiempo real.
+⚽ LaKiniela: Sistema de Trading Deportivo con IA
 
-## 🎯 Objetivos del Proyecto
-* Consolidar un pipeline de datos (ETL) extrayendo información histórica y en tiempo real.
-* Entrenar modelos de Machine Learning para predecir probabilidades reales de victoria, empate o derrota.
-* Integrar APIs externas (Meteorología y The Odds API) para enriquecer el contexto del evento.
-* Desplegar un dashboard interactivo para la visualización de ineficiencias del mercado de apuestas.
+**LaKiniela** es una herramienta integral de MLOps y Data Science diseñada para predecir resultados de fútbol (Primera y Segunda División de España) y detectar oportunidades de inversión (**Value Bets**) cruzando predicciones de Inteligencia Artificial con cuotas reales de casas de apuestas en tiempo real.
 
-## 🏗️ Arquitectura y Módulos
-1. **Data Ingestion:** (Aquí explicaremos cómo obtenemos los CSV y las APIs).
-2. **Feature Engineering:** (Aquí hablaremos del Clima y el cálculo del Elo).
-3. **Machine Learning:** (Modelos usados, métricas de éxito).
-4. **Dashboard:** (Streamlit).
+## **🚀 Características Principales**
 
-## 💻 Tecnologías Utilizadas
-* **Lenguaje:** Python 3.x
-* **Librerías Core:** Pandas, Scikit-Learn, Streamlit, Requests
-* **APIs:** The Odds API, [Nombre de tu API del clima]
+> * **Radar Automático de Value Bets:** Escanea la jornada actual cruzando las cuotas de The Odds API con las predicciones del modelo para encontrar ineficiencias en el mercado (1X2).  
+> * **Predictor Inteligente:** Panel manual con autocompletado de cuotas para simular escenarios dinámicos y consultar probabilidades exactas (Mercados 1X2 y Goles).  
+> * **Gestión de Varianza (Control de Riesgo):** Barra lateral interactiva para filtrar apuestas improbables, exigiendo un porcentaje mínimo de probabilidad de éxito a la IA.  
+> * **Mapeo Universal de Equipos:** Sistema integrado (mapeo\_equipos.json) que estandariza las nomenclaturas de distintas fuentes de datos y APIs en tiempo real.  
+> * **API Local Continua:** Motor de Machine Learning independiente vía FastAPI, sirviendo predicciones matemáticas al instante.
 
-## 🚀 Instalación y Uso
+## **🛠️ Stack Tecnológico**
 
-# LaKiniela Predictor
+> * **Lenguaje:** Python 3.x  
+> * **Análisis y Procesamiento:** Pandas, Numpy  
+> * **Machine Learning:** Scikit-Learn, XGBoost, Random Forest  
+> * **Backend y API:** FastAPI, Uvicorn, Requests  
+> * **Frontend y Dashboard:** Streamlit  
+> * **Fuentes de Datos:** The-Odds-API (Cuotas live), Open-Meteo (Clima histórico), ClubElo (Ratings)
 
-Sistema automatizado de predicción de partidos de fútbol (Primera y Segunda División) basado en Machine Learning (XGBoost y Random Forest) y análisis de métricas Elo.
+## **🏗️ Arquitectura y Pipeline de Datos (ETL)**
 
-## 📂 Bloque 1: Consolidación y Limpieza de Datos
+El proyecto está dividido en un flujo de trabajo modular y escalable.
 
-En este bloque unificamos y depuramos los datos históricos en bruto de ambas categorías Primera y Segunda División de Fútbol de España para generar un único dataset maestro coherente.
+### **Fase 1: Consolidación y Limpieza de Datos (union.py)**
 
-### Script Principal: `union.py`
-Este script automatiza todo el proceso de preparación inicial:
-1. **Carga**: Lee de forma segura los archivos históricos de Primera (`SP1_total.csv`) y Segunda (`SP2_total.csv`) División[cite: 1].
-2. **Fusión**: Combina ambos datasets alineando automáticamente sus registros mediante `pandas`[cite: 1].
-3. **Limpieza**: Filtra el conjunto de datos para conservar únicamente las columnas oficiales de rendimiento, estadísticas de juego y cuotas de apuestas necesarias[cite: 2].
-4. **Exportación**: Genera el archivo maestro definitivo **`LaLiga_Dataset_Final.csv`** listo para el cálculo de Elo y el entrenamiento de los modelos.
+Unificamos y depuramos los datos históricos en bruto de Primera y Segunda División. El script fusiona los datasets alineando registros, filtra las columnas oficiales de rendimiento (estadísticas y cuotas) y genera el dataset base LaLiga\_Dataset\_Final.csv.
 
-### Cómo ejecutarlo:
-```cmd
-python union.py
-```
+### **Fase 2: Sistema de Ratings Elo (actualizar\_elo.py / descargar\_elo\_completo.py)**
 
-## ♟️ Bloque 2: Sistema de Ratings Elo
+Integramos el sistema Elo para medir la fuerza relativa y actualizada de cada club. Se consulta a la API de ClubElo de forma automatizada o mediante scraping.
 
-El Elo mide la fuerza relativa y actualizada de cada equipo de Primera y Segunda División. Se integra en nuestro pipeline para alimentar las variables predictivas de los modelos de Machine Learning.
+### **⚠️ Nota: Si la web de ClubElo sufre restricciones de tráfico, el sistema tiene un "fallback" seguro que prioriza el uso de archivos históricos locales (EloSP1.csv, EloSP1\_Historico.csv).**
 
-### Archivos Clave:
-* **`actualizar_elo.py`**: Diseñado para consultar la API de ClubElo de forma automatizada por fecha y club[cite: 3].
-* **`descargar_elo_completo.py`**: Extrae la tabla histórica de ratings directamente desde el sitio web mediante scraping robusto (`BeautifulSoup` + `pandas`)[cite: 4].
+Fase 3: Enriquecimiento Climático (enriquecer\_clima.py / fusionar\_elo\_clima.py)
 
-> ⚠️ **Nota Importante sobre la Capacidad de la Página:** 
-> La actualización en tiempo real de los ratings desde la web de ClubElo puede verse **imposibilitada u obstaculizada temporalmente** debido a restricciones de tráfico, límites de peticiones de la API o bloqueos de la plataforma externa. Por ello, el sistema prioriza el uso de archivos históricos locales (`EloSP1.csv`, `EloSP1_Historico.csv`) cuando la conexión directa no está disponible.
+Para dar mayor precisión al modelo, incorporamos variables meteorológicas basadas en las coordenadas geográficas de cada estadio. Realizamos peticiones a la API de *Open-Meteo* en la fecha exacta del partido y fusionamos el resultado con los datos de Elo.
 
+### **Fase 4: Entrenamiento de Modelos (entrenar\_modelos.py)**
 
-## ⛅ Bloque 3: Enriquecimiento Climático y Fusión Definitiva
+Cruzamos todo el dataset maestro y preparamos las variables predictivas (Elo, diferencias, cuotas históricas, clima). Entrenamos dos modelos principales:
 
-Para dar mayor realismo y precisión a las predicciones de los partidos, el sistema incorpora variables meteorológicas históricas basadas en la ubicación geográfica de cada estadio.
+> * **XGBoost Classifier:** Optimizado y balanceado para el mercado **1X2**.  
+> * **Random Forest Classifier:** Diseñado para predecir el mercado de **Goles (Más/Menos 2.5)**.
 
-### Scripts y Componentes Principales:
-* **`auditor_equipos.py`**: Verifica que todos los equipos presentes en el histórico de partidos dispongan de sus respectivas coordenadas geográficas en `coordenadas_equipos.csv`[cite: 6].
-* **`enriquecer_clima.py`**: Realiza peticiones masivas a la API de *Open-Meteo* utilizando la latitud y longitud del equipo local en la fecha exacta del partido. Incluye:
-  * Control de reanudación automática si se interrumpe el proceso.
-  * Auto-guardado de seguridad cada 100 registros (`SP1_con_clima.csv`)[cite: 7].
-  * Detección de límites de peticiones (`LIMIT`) por restricciones de IP[cite: 7].
-* **`fusionar_elo_clima.py`**: Consolida el pipeline uniendo los datos meteorológicos y los ratings Elo históricos mediante diccionarios optimizados de alto rendimiento, generando el archivo maestro definitivo **`LaLiga_Dataset_Final.csv`**[cite: 5].
+### **Fase 5: API REST y Despliegue (api\_predicciones.py)**
 
-## 🤖 Bloque 4: Entrenamiento de Modelos y API Predictiva
+Los modelos se serializan (.pkl) y se montan sobre una API ligera con **FastAPI**. Esto expone un endpoint POST (/predecir) para calcular en milisegundos las probabilidades matemáticas de cualquier enfrentamiento.
 
-Una vez consolidado el dataset maestro con la información histórica, los ratings Elo y el clima, procedemos al entrenamiento de los algoritmos de Machine Learning y a la puesta en marcha de una API de inferencia.
+## **⚙️ Instalación y Guía de Uso**
 
-### Archivos Clave:
-* **`entrenar_modelos.py`**: Script encargado de:
-  * Cruzar y alinear los datos de clima y Elo.
-  * Preparar las variables predictivas (`elo_local`, `elo_visitante`, `dif_elo`, cuotas de apuestas `B365`).
-  * Entrenar un **XGBoost Classifier** optimizado para el mercado **1X2** con ponderación de clases balanceadas[cite: 10].
-  * Entrenar un **Random Forest Classifier** para el mercado de **Goles (Más/Menos de 2.5)**[cite: 10].
-  * Serializar y guardar los modelos (`modelo_1x2_xgboost.pkl`, `modelo_goles_rf.pkl`, `label_encoder.pkl`)[cite: 10].
-* **`api_predicciones.py`**: API ligera construida con **FastAPI** que carga los modelos serializados y expone un endpoint POST (`/predecir`) para calcular en tiempo real las probabilidades de cualquier enfrentamiento[cite: 9, 10].
+Sigue estos pasos para replicar el entorno y poner a funcionar el escáner de Value Bets:  
+**1\. Clona el repositorio e instala las dependencias:**
 
+git clone https://github.com/TU\_USUARIO/LaKiniela.git  
+cd LaKiniela  
+pip install \-r requirements.txt
 
+**2\. Levanta el motor de Inteligencia Artificial:**  
+Abre una terminal y ejecuta la API. Este proceso debe quedarse corriendo en segundo plano.
 
-## 🌐 Bloque 5: Interfaz de Usuario y Simulación
+uvicorn api\_predicciones:app \--reload
 
-El proyecto incluye dos modalidades diferentes para interactuar con el motor predictivo y consultar las probabilidades de los partidos:
+**3\. Actualiza las cuotas de la jornada (Opcional):**  
+Si quieres escanear partidos reales, descarga las cuotas más recientes (requiere clave de The Odds API).
 
-⚠️ Requisito previo para ambas interfaces:
-Para que cualquiera de las interfaces pueda calcular las predicciones, el servidor de la API REST debe estar encendido y en funcionamiento en segundo plano ejecutando (en otra terminal):
-  ```cmd
-  uvicorn api_predicciones:app --reload
-  ``` 
-### 1. Interfaz Web Gráfica (Streamlit)
-Permite seleccionar los equipos mediante desplegables visuales, configurar las cuotas de apuestas de forma interactiva y visualizar las probabilidades de los mercados 1X2 y de Goles de manera gráfica.
-* **Archivo:** `app_web.py`
-* **Ejecución:**
-  ```cmd
-  streamlit run app_web.py
-  ```
+python descargar\_cuotas\_live.py
 
-### 2. Simulador Interactivo por Consola
-Herramienta de texto orientada a la terminal para introducir los datos de los equipos y cuotas de forma rápida mediante entrada de teclado (input()).
+**4\. Inicia la Interfaz Visual (Dashboard):**  
+Abre una nueva terminal y lanza la aplicación web. Se abrirá automáticamente en tu navegador.
 
-* **Archivo:** `interfaz_usuario.py`
-* **Ejecución:**
-  ```cmd
-  python interfaz_usuario.py
-  ```
+streamlit run app\_web.py
 
-### 2. Simulador Interactivo por Consola
-Herramienta de texto orientada a la terminal para introducir los datos de los equipos y cuotas de forma rápida mediante entrada de teclado (input()).
-
-* **Archivo:** `interfaz_usuario.py`
-* **Ejecución:**
-  ```cmd
-  python interfaz_usuario.py
-  ```
+*(Nota: Si prefieres una herramienta orientada puramente a texto sin interfaz gráfica, puedes usar el simulador por consola ejecutando python interfaz\_usuario.py).*
