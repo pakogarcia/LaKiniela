@@ -4,22 +4,21 @@
 
 **LaKiniela** es una herramienta integral de MLOps y Data Science diseñada para predecir resultados de fútbol (Primera y Segunda División de España) y detectar oportunidades de inversión (**Value Bets**) cruzando predicciones de Inteligencia Artificial con cuotas reales de casas de apuestas en tiempo real.
 
-## **🚀 Características Principales**
+## ✨ Características Principales
 
-> * **Radar Automático de Value Bets:** Escanea la jornada actual cruzando las cuotas de The Odds API con las predicciones del modelo para encontrar ineficiencias en el mercado (1X2).  
-> * **Predictor Inteligente:** Panel manual con autocompletado de cuotas para simular escenarios dinámicos y consultar probabilidades exactas (Mercados 1X2 y Goles).  
-> * **Gestión de Varianza (Control de Riesgo):** Barra lateral interactiva para filtrar apuestas improbables, exigiendo un porcentaje mínimo de probabilidad de éxito a la IA.  
-> * **Mapeo Universal de Equipos:** Sistema integrado (mapeo\_equipos.json) que estandariza las nomenclaturas de distintas fuentes de datos y APIs en tiempo real.  
-> * **API Local Continua:** Motor de Machine Learning independiente vía FastAPI, sirviendo predicciones matemáticas al instante.
+* **🤖 Modelos de Machine Learning:** Entrenados con datos históricos desde el año 2000. Predicen probabilidades exactas para:
+  * Mercado 1X2 (XGBoost).
+  * Línea de Goles Más/Menos 2.5 (Random Forest).
+  * Ambos Equipos Marcan - BTTS (Random Forest).
+* **💎 Radar Automático de Value Bets:** Se conecta a *The Odds API* para descargar cuotas en vivo de Bet365, las compara con las predicciones de la IA y resalta automáticamente las apuestas con ventaja matemática.
+* **📊 Dashboard Estadístico:** Análisis profundo del factor cancha, probabilidades de goles por equipo, evolución del sistema de puntuación ELO e impacto meteorológico en los partidos.
+* **⚙️ Filtros Dinámicos:** Permite ajustar el umbral de seguridad de la IA para filtrar apuestas arriesgadas.
 
-## **🛠️ Stack Tecnológico**
-
-> * **Lenguaje:** Python 3.x  
-> * **Análisis y Procesamiento:** Pandas, Numpy  
-> * **Machine Learning:** Scikit-Learn, XGBoost, Random Forest  
-> * **Backend y API:** FastAPI, Uvicorn, Requests  
-> * **Frontend y Dashboard:** Streamlit  
-> * **Fuentes de Datos:** The-Odds-API (Cuotas live), Open-Meteo (Clima histórico), ClubElo (Ratings)
+## 🛠️ Tecnologías Utilizadas
+* **Backend y API:** `FastAPI`, `Uvicorn`.
+* **Frontend y Visualización:** `Streamlit`, `Plotly`.
+* **Machine Learning & Datos:** `Scikit-Learn`, `XGBoost`, `Pandas`, `Joblib`.
+* **Fuentes de Datos:** The-Odds-API (Cuotas live), Open-Meteo (Clima histórico), ClubElo (Ratings)
 
 ## **🏗️ Arquitectura y Pipeline de Datos (ETL)**
 

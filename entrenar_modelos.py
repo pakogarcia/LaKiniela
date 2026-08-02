@@ -8,7 +8,7 @@ import joblib
 import warnings
 warnings.filterwarnings('ignore')
 
-print("⚙️ Iniciando procesamiento de datos...")
+print(" Iniciando procesamiento de datos...")
 
 # 1. Cargar datos desde la misma carpeta
 df_clima = pd.read_csv('SP1_con_clima.csv', sep=',')
@@ -47,14 +47,20 @@ print("✅ Datos limpios guardados. Entrenando modelos...")
 
 # 5. Preparar Machine Learning
 df_ml = df_final.dropna(subset=['elo_local', 'elo_visitante', 'FTR']).copy()
-df_ml['Over_2_5'] = np.where((df_ml['FTHG'] + df_ml['FTAG']) > 2.5, 1, 0)
 
-cols = ['elo_local', 'elo_visitante', 'dif_elo', 'B365H', 'B365D', 'B365A', 'FTR', 'Over_2_5']
+# Variables objetivo de goles
+df_ml['Over_2_5'] = np.where((df_ml['FTHG'] + df_ml['FTAG']) > 2.5, 1, 0)
+df_ml['BTTS'] = np.where((df_ml['FTHG'] > 0) & (df_ml['FTAG'] > 0), 1, 0) # Nuevo: Ambos Equipos Marcan
+
+# Añadimos 'BTTS' a las columnas a conservar antes del dropna
+cols = ['elo_local', 'elo_visitante', 'dif_elo', 'B365H', 'B365D', 'B365A', 'FTR', 'Over_2_5', 'BTTS']
 df_ml = df_ml[cols].dropna()
 
+# Definir variables de entrada (X) y salidas (y)
 X = df_ml[['elo_local', 'elo_visitante', 'dif_elo', 'B365H', 'B365D', 'B365A']]
 y_1x2 = df_ml['FTR']
 y_goles = df_ml['Over_2_5']
+y_btts = df_ml['BTTS']
 
 # Entrenar XGBoost (1X2)
 le = LabelEncoder()
@@ -67,13 +73,18 @@ modelo_xgb = xgb.XGBClassifier(
 )
 modelo_xgb.fit(X, y_1x2_encoded, sample_weight=pesos)
 
-# Entrenar Random Forest (Goles)
+# Entrenar Random Forest (Goles > 2.5)
 modelo_rf = RandomForestClassifier(n_estimators=200, max_depth=8, random_state=42)
 modelo_rf.fit(X, y_goles)
+
+# Entrenar Random Forest (BTTS - Ambos Marcan)
+modelo_btts = RandomForestClassifier(n_estimators=150, max_depth=8, random_state=42)
+modelo_btts.fit(X, y_btts)
 
 # 6. Guardar Modelos
 joblib.dump(modelo_xgb, 'modelo_1x2_xgboost.pkl')
 joblib.dump(modelo_rf, 'modelo_goles_rf.pkl')
+joblib.dump(modelo_btts, 'modelo_btts_rf.pkl') # Guardamos el nuevo modelo
 joblib.dump(le, 'label_encoder.pkl')
 
 print("🏆 ¡Modelos entrenados y guardados con éxito!")
