@@ -28,9 +28,11 @@
 
 * **💎 Radar Automático de Value Bets:** Conexión en vivo con *Odds-API.io* para extraer cuotas reales de Bet365, compararlas con las estimaciones de la IA y señalar automáticamente las apuestas con ventaja matemática positiva ($P_{\text{IA}} > P_{\text{Casa}} + \text{Margen}$).
 * **🤖 4 Mercados Predictivos Simultáneos:** Inferencia probabilística en 1X2, Más/Menos 2.5 Goles, Ambos Equipos Marcan (BTTS) y Más/Menos 9.5 Córners.
+* **⏱️ Tracker In-Play & Live Sniper:** Simulador de evolución de cuotas en directo según el minuto de juego, marcador y tarjetas rojas, con cálculo de *Expected Value* ($EV\%$), curva de valor con Plotly y semáforo de entrada óptima.
 * **🔄 Pipeline ETL 100% Automatizado:** Descarga semanal de resultados oficiales, unificación de históricos, enriquecimiento de clima por coordenadas de estadios, cálculo de clasificaciones ELO y reentrenamiento de modelos en 1 solo comando.
 * **🗺️ Mapeo Inteligente (+240 Variantes):** Traductor canónico en JSON (`mapeo_equipos.json`) que resuelve discrepancias en nombres de equipos entre APIs externas, Football-Data, ClubElo y Open-Meteo.
 * **📊 Dashboard Analítico Interactivo:** Interfaz visual construida con Streamlit y Plotly para inspeccionar el factor cancha desde el año 2000, evolución del ELO, medias de córners y correlación del clima con el rendimiento.
+
 
 ---
 
