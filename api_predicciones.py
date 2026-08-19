@@ -9,6 +9,7 @@ app = FastAPI(title="Motor Predictivo LaLiga")
 modelo_1x2 = joblib.load('modelo_1x2_xgboost.pkl')
 modelo_goles = joblib.load('modelo_goles_rf.pkl')
 modelo_btts = joblib.load('modelo_btts_rf.pkl')
+modelo_corners = joblib.load('modelo_corners_rf.pkl')
 
 class DatosPartido(BaseModel):
     elo_local: float
@@ -27,10 +28,11 @@ def predecir_partido(partido: DatosPartido):
         partido.B365H, partido.B365D, partido.B365A
     ]], columns=['elo_local', 'elo_visitante', 'dif_elo', 'B365H', 'B365D', 'B365A'])
 
-    # Pasamos 'datos_entrada' a los 3 modelos por igual
+    # Pasamos 'datos_entrada' a los 4 modelos
     probabilidades_1x2 = modelo_1x2.predict_proba(datos_entrada)[0]
     probabilidades_goles = modelo_goles.predict_proba(datos_entrada)[0]
     probabilidades_btts = modelo_btts.predict_proba(datos_entrada)[0]
+    probabilidades_corners = modelo_corners.predict_proba(datos_entrada)[0]
 
     return {
         "mercado_1X2": {
@@ -45,5 +47,9 @@ def predecir_partido(partido: DatosPartido):
         "mercado_btts": {
             "Ambos_Marcan_No": float(round(probabilidades_btts[0] * 100, 2)),
             "Ambos_Marcan_Si": float(round(probabilidades_btts[1] * 100, 2))
+        },
+        "mercado_corners": {
+            "Menos_de_9.5": float(round(probabilidades_corners[0] * 100, 2)),
+            "Mas_de_9.5": float(round(probabilidades_corners[1] * 100, 2))
         }
-    }
+    }

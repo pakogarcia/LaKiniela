@@ -1,76 +1,188 @@
-# 
+# ⚽ LaKiniela: Sistema de Trading Deportivo e Inteligencia Artificial
 
-⚽ LaKiniela: Sistema de Trading Deportivo con IA
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.30%2B-FF4B4B.svg?logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![XGBoost](https://img.shields.io/badge/XGBoost-ML-EB5424.svg)](https://xgboost.readthedocs.io/)
+[![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-RandomForest-F7931E.svg?logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**LaKiniela** es una herramienta integral de MLOps y Data Science diseñada para predecir resultados de fútbol (Primera y Segunda División de España) y detectar oportunidades de inversión (**Value Bets**) cruzando predicciones de Inteligencia Artificial con cuotas reales de casas de apuestas en tiempo real.
+**LaKiniela** es una plataforma integral de **MLOps, Data Science y Trading Deportivo** diseñada para predecir resultados del fútbol profesional español (Primera y Segunda División) y detectar de forma automática oportunidades de inversión (**Value Bets**) comparando las probabilidades calculadas por Inteligencia Artificial con las cuotas reales de **Bet365** en tiempo real.
+
+---
+
+## 📌 Tabla de Contenidos
+
+- [✨ Características Principales](#-características-principales)
+- [🤖 Modelos de Machine Learning](#-modelos-de-machine-learning)
+- [🏗️ Arquitectura del Sistema](#️-arquitectura-del-sistema)
+- [📂 Estructura del Repositorio](#-estructura-del-repositorio)
+- [⚙️ Requisitos e Instalación](#️-requisitos-e-instalación)
+- [🚀 Guía de Uso (1 solo clic)](#-guía-de-uso-1-solo-clic)
+- [🌐 Fuentes de Datos Integradas](#-fuentes-de-datos-integradas)
+- [🛡️ Diccionario Traductor Canónico](#️-diccionario-traductor-canónico)
+
+---
 
 ## ✨ Características Principales
 
-* **🤖 Modelos de Machine Learning:** Entrenados con datos históricos desde el año 2000. Predicen probabilidades exactas para:
-  * Mercado 1X2 (XGBoost).
-  * Línea de Goles Más/Menos 2.5 (Random Forest).
-  * Ambos Equipos Marcan - BTTS (Random Forest).
-* **💎 Radar Automático de Value Bets:** Se conecta a *The Odds API* para descargar cuotas en vivo de Bet365, las compara con las predicciones de la IA y resalta automáticamente las apuestas con ventaja matemática.
-* **📊 Dashboard Estadístico:** Análisis profundo del factor cancha, probabilidades de goles por equipo, evolución del sistema de puntuación ELO e impacto meteorológico en los partidos.
-* **⚙️ Filtros Dinámicos:** Permite ajustar el umbral de seguridad de la IA para filtrar apuestas arriesgadas.
+* **💎 Radar Automático de Value Bets:** Conexión en vivo con *Odds-API.io* para extraer cuotas reales de Bet365, compararlas con las estimaciones de la IA y señalar automáticamente las apuestas con ventaja matemática positiva ($P_{\text{IA}} > P_{\text{Casa}} + \text{Margen}$).
+* **🤖 4 Mercados Predictivos Simultáneos:** Inferencia probabilística en 1X2, Más/Menos 2.5 Goles, Ambos Equipos Marcan (BTTS) y Más/Menos 9.5 Córners.
+* **🔄 Pipeline ETL 100% Automatizado:** Descarga semanal de resultados oficiales, unificación de históricos, enriquecimiento de clima por coordenadas de estadios, cálculo de clasificaciones ELO y reentrenamiento de modelos en 1 solo comando.
+* **🗺️ Mapeo Inteligente (+240 Variantes):** Traductor canónico en JSON (`mapeo_equipos.json`) que resuelve discrepancias en nombres de equipos entre APIs externas, Football-Data, ClubElo y Open-Meteo.
+* **📊 Dashboard Analítico Interactivo:** Interfaz visual construida con Streamlit y Plotly para inspeccionar el factor cancha desde el año 2000, evolución del ELO, medias de córners y correlación del clima con el rendimiento.
 
-## 🛠️ Tecnologías Utilizadas
-* **Backend y API:** `FastAPI`, `Uvicorn`.
-* **Frontend y Visualización:** `Streamlit`, `Plotly`.
-* **Machine Learning & Datos:** `Scikit-Learn`, `XGBoost`, `Pandas`, `Joblib`.
-* **Fuentes de Datos:** The-Odds-API (Cuotas live), Open-Meteo (Clima histórico), ClubElo (Ratings)
+---
 
-## **🏗️ Arquitectura y Pipeline de Datos (ETL)**
+## 🤖 Modelos de Machine Learning
 
-El proyecto está dividido en un flujo de trabajo modular y escalable.
+El sistema entrena y serializa 4 modelos optimizados con datos históricos consolidados (casi 18.000 partidos):
 
-### **Fase 1: Consolidación y Limpieza de Datos (union.py)**
+| Mercado | Algoritmo | Objetivo | Variables Predictivas |
+| :--- | :--- | :--- | :--- |
+| **1X2 (Resultado Final)** | `XGBClassifier` (Multiclase) | Victoria Local / Empate / Victoria Visitante | `elo_local`, `elo_visitante`, `dif_elo`, `B365H`, `B365D`, `B365A` |
+| **Goles (+/- 2.5)** | `RandomForestClassifier` | Probabilidad de Más de 2.5 Goles | `elo_local`, `elo_visitante`, `dif_elo`, `B365H`, `B365D`, `B365A` |
+| **Ambos Marcan (BTTS)** | `RandomForestClassifier` | Probabilidad de Ambos Equipos Marcan (Sí/No) | `elo_local`, `elo_visitante`, `dif_elo`, `B365H`, `B365D`, `B365A` |
+| **Córners (+/- 9.5)** | `RandomForestClassifier` | Probabilidad de Más de 9.5 Córners | `elo_local`, `elo_visitante`, `dif_elo`, `B365H`, `B365D`, `B365A` |
 
-Unificamos y depuramos los datos históricos en bruto de Primera y Segunda División. El script fusiona los datasets alineando registros, filtra las columnas oficiales de rendimiento (estadísticas y cuotas) y genera el dataset base LaLiga\_Dataset\_Final.csv.
+---
 
-### **Fase 2: Sistema de Ratings Elo (actualizar\_elo.py / descargar\_elo\_completo.py)**
+## 🏗️ Arquitectura del Sistema
 
-Integramos el sistema Elo para medir la fuerza relativa y actualizada de cada club. Se consulta a la API de ClubElo de forma automatizada o mediante scraping.
+```mermaid
+flowchart TD
+    subgraph Fuentes [Fuentes de Datos Externas]
+        FD[Football-Data.co.uk\nResultados Oficiales]
+        OM[Open-Meteo API\nClima Histórico]
+        CE[ClubElo\nRatings de Fuerza]
+        OA[Odds-API.io\nCuotas Live Bet365]
+    end
 
-### **⚠️ Nota: Si la web de ClubElo sufre restricciones de tráfico, el sistema tiene un "fallback" seguro que prioriza el uso de archivos históricos locales (EloSP1.csv, EloSP1\_Historico.csv).**
+    subgraph ETL [Pipeline Maestro: actualizar_sistema_completo.py]
+        P1[1. Descargar Temporada Actual]
+        P2[2. Unificar y Normalizar SP1 / SP2]
+        P3[3. Enriquecer Clima Incremental]
+        P4[4. Fusión ELO y Reentrenamiento ML]
+        P5[5. Descargar Cuotas Bet365]
+    end
 
-Fase 3: Enriquecimiento Climático (enriquecer\_clima.py / fusionar\_elo\_clima.py)
+    subgraph Storage [Datos y Modelos Serializados]
+        DB[(LaLiga_Dataset_Final.csv)]
+        MODELS[4 Modelos .PKL]
+        ODDS[(proxima_jornada.csv)]
+    end
 
-Para dar mayor precisión al modelo, incorporamos variables meteorológicas basadas en las coordenadas geográficas de cada estadio. Realizamos peticiones a la API de *Open-Meteo* en la fecha exacta del partido y fusionamos el resultado con los datos de Elo.
+    subgraph App [Frontend & Backend]
+        API[FastAPI Backend\napi_predicciones.py]
+        UI[Streamlit Dashboard\napp_web.py]
+    end
 
-### **Fase 4: Entrenamiento de Modelos (entrenar\_modelos.py)**
+    FD --> P1
+    P1 --> P2
+    OM --> P3
+    CE --> P4
+    P2 --> P3 --> P4 --> DB
+    DB --> P4 --> MODELS
+    OA --> P5 --> ODDS
 
-Cruzamos todo el dataset maestro y preparamos las variables predictivas (Elo, diferencias, cuotas históricas, clima). Entrenamos dos modelos principales:
+    MODELS --> API
+    ODDS --> UI
+    API --> UI
+```
 
-> * **XGBoost Classifier:** Optimizado y balanceado para el mercado **1X2**.  
-> * **Random Forest Classifier:** Diseñado para predecir el mercado de **Goles (Más/Menos 2.5)**.
+---
 
-### **Fase 5: API REST y Despliegue (api\_predicciones.py)**
+## 📂 Estructura del Repositorio
 
-Los modelos se serializan (.pkl) y se montan sobre una API ligera con **FastAPI**. Esto expone un endpoint POST (/predecir) para calcular en milisegundos las probabilidades matemáticas de cualquier enfrentamiento.
+```
+LaKiniela/
+├── actualizar_sistema_completo.py   # 🔄 Pipeline maestro de ETL, Clima, ELO, Modelos y Cuotas
+├── api_predicciones.py              # ⚡ Servidor REST FastAPI (Endpoint POST /predecir)
+├── app_web.py                       # 📊 Dashboard interactivo de Streamlit
+├── descargar_cuotas_live.py         # 🌐 Módulo de descarga y mapeo de cuotas Bet365
+├── entrenar_modelos.py              # 🤖 Script de reentrenamiento directo de los 4 modelos
+├── auditor_equipos.py               # 🔍 Auditor de coordenadas geográficas de estadios
+│
+├── mapeo_equipos.json               # 🗺️ Diccionario oficial de mapeo canónico de clubes
+├── coordenadas_equipos.csv          # 📍 Latitud y longitud de los estadios
+├── LaLiga_Dataset_Final.csv         # 📈 Dataset maestro consolidado y enriquecido
+├── proxima_jornada.csv              # 📅 Partidos, fechas y cuotas en vivo de la jornada
+│
+├── modelo_1x2_xgboost.pkl           # 🧠 Modelo serializado 1X2
+├── modelo_goles_rf.pkl              # 🧠 Modelo serializado Goles (+/- 2.5)
+├── modelo_btts_rf.pkl               # 🧠 Modelo serializado Ambos Marcan
+├── modelo_corners_rf.pkl            # 🧠 Modelo serializado Córners (+/- 9.5)
+├── label_encoder.pkl                # 🏷️ LabelEncoder de clases 1X2
+│
+├── SP1/                             # 📁 CSVs por temporada de Primera División
+├── SP2/                             # 📁 CSVs por temporada de Segunda División
+│
+├── iniciar_lakiniela_completo.bat   # 🌟 Lanzador TODO-EN-UNO (Sincroniza, entrena y abre web)
+├── actualizar_todo.bat              # 🔄 Sincroniza datos históricos y reentrena modelos
+├── jornada_actual.bat               # ⚽ Levanta la API y abre el Dashboard web existente
+├── respaldo_datos.bat               # 💾 Script de backup de datos
+├── requirements.txt                 # 📦 Dependencias de Python
+└── README.md                        # 📖 Documentación del proyecto
+```
 
-## **⚙️ Instalación y Guía de Uso**
+---
 
-Sigue estos pasos para replicar el entorno y poner a funcionar el escáner de Value Bets:  
-**1\. Clona el repositorio e instala las dependencias:**
+## ⚙️ Requisitos e Instalación
 
-git clone https://github.com/TU\_USUARIO/LaKiniela.git  
-cd LaKiniela  
-pip install \-r requirements.txt
+### 1. Clonar el repositorio
+```bash
+git clone https://github.com/pakogarcia/LaKiniela.git
+cd LaKiniela
+```
 
-**2\. Levanta el motor de Inteligencia Artificial:**  
-Abre una terminal y ejecuta la API. Este proceso debe quedarse corriendo en segundo plano.
+### 2. Crear y activar el entorno virtual
+```bash
+python -m venv env_futbol
+# En Windows:
+env_futbol\Scripts\activate
+```
 
-uvicorn api\_predicciones:app \--reload
+### 3. Instalar las dependencias
+```bash
+pip install -r requirements.txt
+```
 
-**3\. Actualiza las cuotas de la jornada (Opcional):**  
-Si quieres escanear partidos reales, descarga las cuotas más recientes (requiere clave de The Odds API).
+### 4. Configurar la clave de la API de cuotas
+Crea un archivo `.env` en la raíz del proyecto con tu clave de [Odds-API.io](https://odds-api.io/):
+```env
+THE_ODDS_API_KEY=tu_clave_aqui
+```
 
-python descargar\_cuotas\_live.py
+---
 
-**4\. Inicia la Interfaz Visual (Dashboard):**  
-Abre una nueva terminal y lanza la aplicación web. Se abrirá automáticamente en tu navegador.
+## 🚀 Guía de Uso (1 solo clic)
 
-streamlit run app\_web.py
+Para mayor comodidad en Windows, el proyecto cuenta con scripts `.bat` automatizados:
 
-*(Nota: Si prefieres una herramienta orientada puramente a texto sin interfaz gráfica, puedes usar el simulador por consola ejecutando python interfaz\_usuario.py).*
+| Archivo Batch | Función | ¿Cuándo utilizarlo? |
+| :--- | :--- | :--- |
+| **`iniciar_lakiniela_completo.bat`** *(Recomendado)* | **Hace TODO en 1 clic**: actualiza resultados, clima y ELO, reentrena los 4 modelos de IA, descarga las cuotas en vivo de Bet365, levanta FastAPI y abre el Dashboard en el navegador. | Al empezar a analizar una nueva jornada. |
+| **`actualizar_todo.bat`** | Sincroniza el histórico, enriquece datos y reentrena los modelos sin abrir la interfaz gráfica. | Tras finalizar los partidos del fin de semana. |
+| **`jornada_actual.bat`** | Levanta la API y abre directamente el Dashboard web con los datos ya existentes. | Para consultar predicciones sin volver a descargar datos. |
+
+---
+
+## 🌐 Fuentes de Datos Integradas
+
+* **[Football-Data.co.uk](https://www.football-data.co.uk/):** Resultados históricos, estadísticas de partido (goles, tiros, faltas, córners, tarjetas) y cuotas históricas de Bet365.
+* **[Odds-API.io](https://odds-api.io/):** Cuotas en tiempo real de Bet365 para partidos de Primera y Segunda División de España.
+* **[Open-Meteo](https://open-meteo.com/):** Variables climáticas históricas (temperatura máxima, precipitaciones y velocidad del viento) en las coordenadas del estadio local.
+* **[ClubElo](http://clubelo.com/):** Sistema de ratings ELO para evaluar la fuerza relativa y actualizada de cada club.
+
+---
+
+## 🛡️ Diccionario Traductor Canónico
+
+Para evitar discrepancias entre diferentes proveedores (por ejemplo: *"Real Betis Seville"*, *"Real Betis Balompié"*, *"Betis"* o *"Atlético de Madrid"*, *"Athletic Club"*), el archivo [mapeo_equipos.json](mapeo_equipos.json) actúa como fuente única de verdad con más de **240 variantes normalizadas** hacia los nombres canónicos de la base de datos.
+
+---
+
+## 👤 Autor
+
+Desarrollado por **Pako García** - [GitHub @pakogarcia](https://github.com/pakogarcia)
+

@@ -3,3 +3,4 @@ env_futbol/
 __pycache__/
 SP1/
 SP2/
+.agents/

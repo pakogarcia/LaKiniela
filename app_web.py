@@ -37,20 +37,34 @@ except FileNotFoundError:
 def obtener_ultimo_elo(equipo):
     equipo_normalizado = normalizar_nombre(equipo)
     if df_historico.empty:
-        return 1.5
-    df_e = df_historico[(df_historico['HomeTeam'] == equipo_normalizado) | (df_historico['AwayTeam'] == equipo_normalizado)]
+        return 1550.0
+    
+    # Filtrar partidos del equipo donde el ELO esté registrado
+    df_e = df_historico[
+        ((df_historico['HomeTeam'] == equipo_normalizado) & df_historico['elo_local'].notna()) |
+        ((df_historico['AwayTeam'] == equipo_normalizado) & df_historico['elo_visitante'].notna())
+    ]
     if not df_e.empty:
         fila = df_e.iloc[-1]
-        return fila['elo_local'] if fila['HomeTeam'] == equipo_normalizado else fila['elo_visitante']
-    return 1.5
+        val = fila['elo_local'] if fila['HomeTeam'] == equipo_normalizado else fila['elo_visitante']
+        if pd.notna(val):
+            return float(val)
+            
+    # Fallback: media general de ELO de la base de datos
+    media_elo = df_historico['elo_local'].dropna().mean()
+    return float(media_elo) if pd.notna(media_elo) else 1550.0
 
 def cargar_proxima_jornada():
     archivo = "proxima_jornada.csv"
     if os.path.exists(archivo):
-        return pd.read_csv(archivo)
+        try:
+            return pd.read_csv(archivo, sep=None, engine='python', encoding='utf-8')
+        except Exception:
+            return pd.read_csv(archivo, sep=';', encoding='utf-8')
     return None
 
 df_jornada = cargar_proxima_jornada()
+
 
 
 # ==========================================
@@ -86,11 +100,11 @@ st.markdown("---")
 tab1, tab2, tab3 = st.tabs(["📅 Radar Automático (Próxima Jornada)", "🤖 Predictor Inteligente (Manual)", "📊 Estadística Avanzada"])
 
 # ==========================================
-# PESTAÑA 1: RADAR AUTOMÁTICO (ACTUALIZADO CON 3 MERCADOS)
+# PESTAÑA 1: RADAR AUTOMÁTICO (ACTUALIZADO CON 4 MERCADOS)
 # ==========================================
 with tab1:
     if df_jornada is not None and not df_jornada.empty:
-        st.subheader("Radar de Apuestas de Valor (1X2, Goles y Ambos Marcan)")
+        st.subheader("Radar de Apuestas de Valor (1X2, Goles, Ambos Marcan y Córners)")
         
         tabla_analisis = []
         
@@ -104,14 +118,18 @@ with tab1:
             b365_d = float(row.get('B365D', 0.0)) if pd.notna(row.get('B365D', 0.0)) else 0.0
             b365_a = float(row.get('B365A', 0.0)) if pd.notna(row.get('B365A', 0.0)) else 0.0
             
-            # Mercado Goles (NUEVO)
+            # Mercado Goles
             b365_over = float(row.get('B365_Over25', 0.0)) if pd.notna(row.get('B365_Over25', 0.0)) else 0.0
             b365_under = float(row.get('B365_Under25', 0.0)) if pd.notna(row.get('B365_Under25', 0.0)) else 0.0
             
-            # Mercado BTTS (NUEVO)
+            # Mercado BTTS
             b365_btts_y = float(row.get('B365_BTTS_Y', 0.0)) if pd.notna(row.get('B365_BTTS_Y', 0.0)) else 0.0
             b365_btts_n = float(row.get('B365_BTTS_N', 0.0)) if pd.notna(row.get('B365_BTTS_N', 0.0)) else 0.0
             
+            # Mercado Córners (NUEVO)
+            b365_cor_over = float(row.get('B365_Over95_Corners', 0.0)) if pd.notna(row.get('B365_Over95_Corners', 0.0)) else 0.0
+            b365_cor_under = float(row.get('B365_Under95_Corners', 0.0)) if pd.notna(row.get('B365_Under95_Corners', 0.0)) else 0.0
+
             # --- 2. CONVERTIR A PORCENTAJES MATEMÁTICOS ---
             prob_b365_h = (1 / b365_h) * 100 if b365_h > 0 else 0
             prob_b365_d = (1 / b365_d) * 100 if b365_d > 0 else 0
@@ -120,23 +138,27 @@ with tab1:
             prob_b365_under = (1 / b365_under) * 100 if b365_under > 0 else 0
             prob_b365_btts_y = (1 / b365_btts_y) * 100 if b365_btts_y > 0 else 0
             prob_b365_btts_n = (1 / b365_btts_n) * 100 if b365_btts_n > 0 else 0
+            prob_b365_cor_over = (1 / b365_cor_over) * 100 if b365_cor_over > 0 else 0
+            prob_b365_cor_under = (1 / b365_cor_under) * 100 if b365_cor_under > 0 else 0
             
             # --- 3. CONSULTAR A NUESTRA INTELIGENCIA ARTIFICIAL ---
             datos_api = {
                 "elo_local": float(obtener_ultimo_elo(h_team)),
                 "elo_visitante": float(obtener_ultimo_elo(a_team)),
-                "B365H": b365_h, "B365D": b365_d, "B365A": b365_a
+                "B365H": b365_h if b365_h > 0 else 2.00,
+                "B365D": b365_d if b365_d > 0 else 3.40,
+                "B365A": b365_a if b365_a > 0 else 3.20
             }
             
             prob_ia_h, prob_ia_d, prob_ia_a = 0.0, 0.0, 0.0
             prob_ia_over, prob_ia_under = 0.0, 0.0
             prob_ia_btts_y, prob_ia_btts_n = 0.0, 0.0
+            prob_ia_cor_over, prob_ia_cor_under = 0.0, 0.0
             
             try:
-                res = requests.post("http://127.0.0.1:8000/predecir", json=datos_api)
+                res = requests.post("http://127.0.0.1:8000/predecir", json=datos_api, timeout=5)
                 if res.status_code == 200:
                     pred = res.json()
-                    # Extraer las 7 probabilidades
                     prob_ia_h = float(pred['mercado_1X2']['Victoria_Local'])
                     prob_ia_d = float(pred['mercado_1X2']['Empate'])
                     prob_ia_a = float(pred['mercado_1X2']['Victoria_Visitante'])
@@ -144,13 +166,16 @@ with tab1:
                     prob_ia_over = float(pred['mercado_goles']['Mas_de_2.5'])
                     prob_ia_btts_n = float(pred['mercado_btts']['Ambos_Marcan_No'])
                     prob_ia_btts_y = float(pred['mercado_btts']['Ambos_Marcan_Si'])
+                    if 'mercado_corners' in pred:
+                        prob_ia_cor_under = float(pred['mercado_corners']['Menos_de_9.5'])
+                        prob_ia_cor_over = float(pred['mercado_corners']['Mas_de_9.5'])
             except:
                 pass 
             
             # --- 4. DETECCIÓN AUTOMÁTICA DE VALUE BETS ---
             recomendaciones = []
             
-            if prob_ia_h > 0: # Solo si la API respondió correctamente
+            if prob_ia_h > 0:
                 # Mercado 1X2
                 if prob_b365_h > 0 and prob_ia_h > (prob_b365_h + 2.0) and prob_ia_h >= umbral_prob:
                     recomendaciones.append(f"🏠 1 (+{prob_ia_h - prob_b365_h:.1f}%)")
@@ -170,6 +195,12 @@ with tab1:
                     recomendaciones.append(f"⚽ BTTS: SÍ (+{prob_ia_btts_y - prob_b365_btts_y:.1f}%)")
                 if prob_b365_btts_n > 0 and prob_ia_btts_n > (prob_b365_btts_n + 2.0) and prob_ia_btts_n >= umbral_prob:
                     recomendaciones.append(f"🚫 BTTS: NO (+{prob_ia_btts_n - prob_b365_btts_n:.1f}%)")
+
+                # Mercado Córners (NUEVO)
+                if prob_b365_cor_over > 0 and prob_ia_cor_over > (prob_b365_cor_over + 2.0) and prob_ia_cor_over >= umbral_prob:
+                    recomendaciones.append(f"🚩 +9.5 Córners (+{prob_ia_cor_over - prob_b365_cor_over:.1f}%)")
+                if prob_b365_cor_under > 0 and prob_ia_cor_under > (prob_b365_cor_under + 2.0) and prob_ia_cor_under >= umbral_prob:
+                    recomendaciones.append(f"🚩 -9.5 Córners (+{prob_ia_cor_under - prob_b365_cor_under:.1f}%)")
             
             if recomendaciones:
                 seleccion_final = " | ".join(recomendaciones)
@@ -205,6 +236,7 @@ with tab2:
         c1_def, cx_def, c2_def = 2.00, 3.50, 3.00
         co_def, cu_def = 1.90, 1.90
         cby_def, cbn_def = 1.90, 1.90
+        cco_def, ccu_def = 1.83, 1.83
         partido_encontrado = False
         
         # Autorellenar si el partido está en el CSV de la jornada
@@ -218,26 +250,32 @@ with tab2:
                     cu_def = float(row.get('B365_Under25', 1.90)) if pd.notna(row.get('B365_Under25')) else 1.90
                     cby_def = float(row.get('B365_BTTS_Y', 1.90)) if pd.notna(row.get('B365_BTTS_Y')) else 1.90
                     cbn_def = float(row.get('B365_BTTS_N', 1.90)) if pd.notna(row.get('B365_BTTS_N')) else 1.90
+                    cco_def = float(row.get('B365_Over95_Corners', 1.83)) if pd.notna(row.get('B365_Over95_Corners')) else 1.83
+                    ccu_def = float(row.get('B365_Under95_Corners', 1.83)) if pd.notna(row.get('B365_Under95_Corners')) else 1.83
                     partido_encontrado = True
                     break
         
         if partido_encontrado:
-            st.success("🎯 **Partido detectado en la jornada actual.** Cuotas de los 3 mercados rellenadas automáticamente.")
+            st.success("🎯 **Partido detectado en la jornada actual.** Cuotas de los 4 mercados rellenadas automáticamente.")
 
         st.markdown("**Introduce o verifica las cuotas de la casa de apuestas:**")
         
         # Fila 1: Cuotas 1X2
+        st.caption("🏆 Mercado 1X2")
         col_q1, col_qx, col_q2 = st.columns(3)
-        with col_q1: cuota_1 = st.number_input("Local (1)", value=c1_def, step=0.10, format="%.2f")
-        with col_qx: cuota_X = st.number_input("Empate (X)", value=cx_def, step=0.10, format="%.2f")
-        with col_q2: cuota_2 = st.number_input("Visitante (2)", value=c2_def, step=0.10, format="%.2f")
+        with col_q1: cuota_1 = st.number_input("Local (1)", value=c1_def, step=0.05, format="%.2f")
+        with col_qx: cuota_X = st.number_input("Empate (X)", value=cx_def, step=0.05, format="%.2f")
+        with col_q2: cuota_2 = st.number_input("Visitante (2)", value=c2_def, step=0.05, format="%.2f")
 
-        # Fila 2: Cuotas Goles y BTTS
-        col_qo, col_qu, col_qby, col_qbn = st.columns(4)
-        with col_qo: cuota_over = st.number_input("Más +2.5", value=co_def, step=0.10, format="%.2f")
-        with col_qu: cuota_under = st.number_input("Menos -2.5", value=cu_def, step=0.10, format="%.2f")
-        with col_qby: cuota_btts_si = st.number_input("BTTS (SÍ)", value=cby_def, step=0.10, format="%.2f")
-        with col_qbn: cuota_btts_no = st.number_input("BTTS (NO)", value=cbn_def, step=0.10, format="%.2f")
+        # Fila 2: Cuotas Goles, BTTS y Córners
+        st.caption("🥅 Mercados de Goles, Ambos Marcan y Córners")
+        col_qo, col_qu, col_qby, col_qbn, col_qco, col_qcu = st.columns(6)
+        with col_qo: cuota_over = st.number_input("Más +2.5 Goles", value=co_def, step=0.05, format="%.2f")
+        with col_qu: cuota_under = st.number_input("Menos -2.5 Goles", value=cu_def, step=0.05, format="%.2f")
+        with col_qby: cuota_btts_si = st.number_input("BTTS (SÍ)", value=cby_def, step=0.05, format="%.2f")
+        with col_qbn: cuota_btts_no = st.number_input("BTTS (NO)", value=cbn_def, step=0.05, format="%.2f")
+        with col_qco: cuota_cor_over = st.number_input("Más +9.5 Córners", value=cco_def, step=0.05, format="%.2f")
+        with col_qcu: cuota_cor_under = st.number_input("Menos -9.5 Córners", value=ccu_def, step=0.05, format="%.2f")
 
         if st.button("🤖 Calcular Predicción y Analizar Valor"):
             datos_manuales = {
@@ -253,20 +291,26 @@ with tab2:
                     
                     st.markdown("---")
                     
-                    res_col1, res_col2, res_col3 = st.columns(3)
+                    res_col1, res_col2, res_col3, res_col4 = st.columns(4)
                     with res_col1:
                         st.markdown("### 🏆 Probabilidades 1X2")
                         st.write(f"🏠 Local: **{float(pred['mercado_1X2']['Victoria_Local']):.2f}%**")
                         st.write(f"🤝 Empate: **{float(pred['mercado_1X2']['Empate']):.2f}%**")
                         st.write(f"✈️ Visitante: **{float(pred['mercado_1X2']['Victoria_Visitante']):.2f}%**")
                     with res_col2:
-                        st.markdown("### 🥅 Goles (Más/Menos)")
+                        st.markdown("### 🥅 Goles (+/- 2.5)")
                         st.write(f"🔼 Más de 2.5: **{float(pred['mercado_goles']['Mas_de_2.5']):.2f}%**")
                         st.write(f"🔽 Menos de 2.5: **{float(pred['mercado_goles']['Menos_de_2.5']):.2f}%**")
                     with res_col3:
                         st.markdown("### ⚽ Ambos Marcan (BTTS)")
                         st.write(f"✅ SÍ marcan: **{float(pred['mercado_btts']['Ambos_Marcan_Si']):.2f}%**")
                         st.write(f"❌ NO marcan: **{float(pred['mercado_btts']['Ambos_Marcan_No']):.2f}%**")
+                    with res_col4:
+                        st.markdown("### 🚩 Córners (+/- 9.5)")
+                        p_co_val = float(pred.get('mercado_corners', {}).get('Mas_de_9.5', 50.0))
+                        p_cu_val = float(pred.get('mercado_corners', {}).get('Menos_de_9.5', 50.0))
+                        st.write(f"🔼 Más de 9.5: **{p_co_val:.2f}%**")
+                        st.write(f"🔽 Menos de 9.5: **{p_cu_val:.2f}%**")
 
                     st.markdown("---")
                     st.markdown("### 💎 Análisis Integral de Apuesta de Valor (Todos los Mercados)")
@@ -280,6 +324,8 @@ with tab2:
                     prob_casa_under = (1 / cuota_under) * 100 if cuota_under > 0 else 0
                     prob_casa_btts_si = (1 / cuota_btts_si) * 100 if cuota_btts_si > 0 else 0
                     prob_casa_btts_no = (1 / cuota_btts_no) * 100 if cuota_btts_no > 0 else 0
+                    prob_casa_cor_over = (1 / cuota_cor_over) * 100 if cuota_cor_over > 0 else 0
+                    prob_casa_cor_under = (1 / cuota_cor_under) * 100 if cuota_cor_under > 0 else 0
                     
                     # 2. Extraer probabilidades de la IA
                     prob_ia_1 = float(pred['mercado_1X2']['Victoria_Local'])
@@ -289,6 +335,8 @@ with tab2:
                     prob_ia_under = float(pred['mercado_goles']['Menos_de_2.5'])
                     prob_ia_btts_si = float(pred['mercado_btts']['Ambos_Marcan_Si'])
                     prob_ia_btts_no = float(pred['mercado_btts']['Ambos_Marcan_No'])
+                    prob_ia_cor_over = float(pred.get('mercado_corners', {}).get('Mas_de_9.5', 50.0))
+                    prob_ia_cor_under = float(pred.get('mercado_corners', {}).get('Menos_de_9.5', 50.0))
                     
                     # 3. Evaluar condiciones de Value Bet
                     val_1 = prob_ia_1 > (prob_casa_1 + 2.0) and prob_ia_1 >= umbral_prob
@@ -298,30 +346,38 @@ with tab2:
                     val_under = prob_ia_under > (prob_casa_under + 2.0) and prob_ia_under >= umbral_prob
                     val_btts_si = prob_ia_btts_si > (prob_casa_btts_si + 2.0) and prob_ia_btts_si >= umbral_prob
                     val_btts_no = prob_ia_btts_no > (prob_casa_btts_no + 2.0) and prob_ia_btts_no >= umbral_prob
+                    val_cor_over = prob_ia_cor_over > (prob_casa_cor_over + 2.0) and prob_ia_cor_over >= umbral_prob
+                    val_cor_under = prob_ia_cor_under > (prob_casa_cor_under + 2.0) and prob_ia_cor_under >= umbral_prob
                     
                     hay_valor = False
                     
                     # 4. Imprimir informes detallados
                     if val_1:
-                        st.info(f"🏠 **Victoria Local (1):** ¡INVERSIÓN RECOMENDADA! La cuota {cuota_1} asume un {prob_casa_1:.1f}% de éxito. Tu IA calcula un **{prob_ia_1:.1f}%**. Ventaja matemática: **+{prob_ia_1 - prob_casa_1:.1f}%** (Supera tu filtro del **{umbral_prob}%**).")
+                        st.info(f"🏠 **Victoria Local (1):** ¡INVERSIÓN RECOMENDADA! Cuota {cuota_1} (Casa: {prob_casa_1:.1f}% vs IA: **{prob_ia_1:.1f}%**). Ventaja: **+{prob_ia_1 - prob_casa_1:.1f}%**.")
                         hay_valor = True
                     if val_X:
-                        st.info(f"🤝 **Empate (X):** ¡INVERSIÓN RECOMENDADA! La cuota {cuota_X} asume un {prob_casa_X:.1f}% de éxito. Tu IA calcula un **{prob_ia_X:.1f}%**. Ventaja matemática: **+{prob_ia_X - prob_casa_X:.1f}%** (Supera tu filtro del **{umbral_prob}%**).")
+                        st.info(f"🤝 **Empate (X):** ¡INVERSIÓN RECOMENDADA! Cuota {cuota_X} (Casa: {prob_casa_X:.1f}% vs IA: **{prob_ia_X:.1f}%**). Ventaja: **+{prob_ia_X - prob_casa_X:.1f}%**.")
                         hay_valor = True
                     if val_2:
-                        st.info(f"✈️ **Victoria Visitante (2):** ¡INVERSIÓN RECOMENDADA! La cuota {cuota_2} asume un {prob_casa_2:.1f}% de éxito. Tu IA calcula un **{prob_ia_2:.1f}%**. Ventaja matemática: **+{prob_ia_2 - prob_casa_2:.1f}%** (Supera tu filtro del **{umbral_prob}%**).")
+                        st.info(f"✈️ **Victoria Visitante (2):** ¡INVERSIÓN RECOMENDADA! Cuota {cuota_2} (Casa: {prob_casa_2:.1f}% vs IA: **{prob_ia_2:.1f}%**). Ventaja: **+{prob_ia_2 - prob_casa_2:.1f}%**.")
                         hay_valor = True
                     if val_over:
-                        st.success(f"🔼 **Más de 2.5 Goles:** ¡INVERSIÓN RECOMENDADA! La cuota {cuota_over} asume un {prob_casa_over:.1f}% de éxito. Tu IA calcula un **{prob_ia_over:.1f}%**. Ventaja matemática: **+{prob_ia_over - prob_casa_over:.1f}%** (Supera tu filtro del **{umbral_prob}%**).")
+                        st.success(f"🔼 **Más de 2.5 Goles:** ¡INVERSIÓN RECOMENDADA! Cuota {cuota_over} (Casa: {prob_casa_over:.1f}% vs IA: **{prob_ia_over:.1f}%**). Ventaja: **+{prob_ia_over - prob_casa_over:.1f}%**.")
                         hay_valor = True
                     if val_under:
-                        st.success(f"🔽 **Menos de 2.5 Goles:** ¡INVERSIÓN RECOMENDADA! La cuota {cuota_under} asume un {prob_casa_under:.1f}% de éxito. Tu IA calcula un **{prob_ia_under:.1f}%**. Ventaja matemática: **+{prob_ia_under - prob_casa_under:.1f}%** (Supera tu filtro del **{umbral_prob}%**).")
+                        st.success(f"🔽 **Menos de 2.5 Goles:** ¡INVERSIÓN RECOMENDADA! Cuota {cuota_under} (Casa: {prob_casa_under:.1f}% vs IA: **{prob_ia_under:.1f}%**). Ventaja: **+{prob_ia_under - prob_casa_under:.1f}%**.")
                         hay_valor = True
                     if val_btts_si:
-                        st.success(f"⚽ **Ambos Marcan (SÍ):** ¡INVERSIÓN RECOMENDADA! La cuota {cuota_btts_si} asume un {prob_casa_btts_si:.1f}% de éxito. Tu IA calcula un **{prob_ia_btts_si:.1f}%**. Ventaja matemática: **+{prob_ia_btts_si - prob_casa_btts_si:.1f}%** (Supera tu filtro del **{umbral_prob}%**).")
+                        st.success(f"⚽ **Ambos Marcan (SÍ):** ¡INVERSIÓN RECOMENDADA! Cuota {cuota_btts_si} (Casa: {prob_casa_btts_si:.1f}% vs IA: **{prob_ia_btts_si:.1f}%**). Ventaja: **+{prob_ia_btts_si - prob_casa_btts_si:.1f}%**.")
                         hay_valor = True
                     if val_btts_no:
-                        st.success(f"🚫 **Ambos Marcan (NO):** ¡INVERSIÓN RECOMENDADA! La cuota {cuota_btts_no} asume un {prob_casa_btts_no:.1f}% de éxito. Tu IA calcula un **{prob_ia_btts_no:.1f}%**. Ventaja matemática: **+{prob_ia_btts_no - prob_casa_btts_no:.1f}%** (Supera tu filtro del **{umbral_prob}%**).")
+                        st.success(f"🚫 **Ambos Marcan (NO):** ¡INVERSIÓN RECOMENDADA! Cuota {cuota_btts_no} (Casa: {prob_casa_btts_no:.1f}% vs IA: **{prob_ia_btts_no:.1f}%**). Ventaja: **+{prob_ia_btts_no - prob_casa_btts_no:.1f}%**.")
+                        hay_valor = True
+                    if val_cor_over:
+                        st.success(f"🚩 **Más de 9.5 Córners:** ¡INVERSIÓN RECOMENDADA! Cuota {cuota_cor_over} (Casa: {prob_casa_cor_over:.1f}% vs IA: **{prob_ia_cor_over:.1f}%**). Ventaja: **+{prob_ia_cor_over - prob_casa_cor_over:.1f}%**.")
+                        hay_valor = True
+                    if val_cor_under:
+                        st.success(f"🚩 **Menos de 9.5 Córners:** ¡INVERSIÓN RECOMENDADA! Cuota {cuota_cor_under} (Casa: {prob_casa_cor_under:.1f}% vs IA: **{prob_ia_cor_under:.1f}%**). Ventaja: **+{prob_ia_cor_under - prob_casa_cor_under:.1f}%**.")
                         hay_valor = True
                     
                     if not hay_valor:
@@ -392,6 +448,38 @@ with tab3:
                     st.markdown("---")
                     st.write(f"⚠️ Recibir 1+ gol: **{(len(df_vis[df_vis['FTHG'] >= 1]) / partidos_vis)*100:.1f}%**")
                     st.write(f"🚨 Recibir 2+ goles: **{(len(df_vis[df_vis['FTHG'] >= 2]) / partidos_vis)*100:.1f}%**")
+
+                # SECCIÓN CÓRNERS ESTADÍSTICA
+                if 'HC' in df_loc.columns and 'AC' in df_loc.columns:
+                    df_loc_cor = df_loc.dropna(subset=['HC', 'AC'])
+                    df_vis_cor = df_vis.dropna(subset=['HC', 'AC'])
+                    
+                    if not df_loc_cor.empty and not df_vis_cor.empty:
+                        st.markdown("---")
+                        st.markdown("### 🚩 Estadísticas de Córners")
+                        cor_c1, cor_c2 = st.columns(2)
+                        
+                        with cor_c1:
+                            cor_fav_loc = df_loc_cor['HC'].mean()
+                            cor_con_loc = df_loc_cor['AC'].mean()
+                            tot_cor_loc = df_loc_cor['HC'] + df_loc_cor['AC']
+                            st.markdown(f"**{local} (Local):**")
+                            st.write(f"🎯 Córners a favor (Media): **{cor_fav_loc:.2f}**")
+                            st.write(f"🛡️ Córners en contra (Media): **{cor_con_loc:.2f}**")
+                            st.write(f"🚩 Partido con +8.5 córners: **{((tot_cor_loc > 8.5).mean())*100:.1f}%**")
+                            st.write(f"🚩 Partido con +9.5 córners: **{((tot_cor_loc > 9.5).mean())*100:.1f}%**")
+                            st.write(f"🚩 Partido con +10.5 córners: **{((tot_cor_loc > 10.5).mean())*100:.1f}%**")
+
+                        with cor_c2:
+                            cor_fav_vis = df_vis_cor['AC'].mean()
+                            cor_con_vis = df_vis_cor['HC'].mean()
+                            tot_cor_vis = df_vis_cor['HC'] + df_vis_cor['AC']
+                            st.markdown(f"**{visitante} (Visitante):**")
+                            st.write(f"🎯 Córners a favor (Media): **{cor_fav_vis:.2f}**")
+                            st.write(f"🛡️ Córners en contra (Media): **{cor_con_vis:.2f}**")
+                            st.write(f"🚩 Partido con +8.5 córners: **{((tot_cor_vis > 8.5).mean())*100:.1f}%**")
+                            st.write(f"🚩 Partido con +9.5 córners: **{((tot_cor_vis > 9.5).mean())*100:.1f}%**")
+                            st.write(f"🚩 Partido con +10.5 córners: **{((tot_cor_vis > 10.5).mean())*100:.1f}%**")
                 
                 st.markdown("---")
                 
@@ -414,4 +502,4 @@ with tab3:
             else:
                 st.warning("No hay suficientes datos desde el año 2000 para estos equipos.")
     else:
-        st.error("No se ha podido cargar el dataset histórico.")
+        st.error("No se ha podido cargar el dataset histórico.")
